@@ -19,6 +19,7 @@ jobs:
         run: |
           pip install azure-ai-ml azure-identity
 
+      # --- THIS IS THE FIXED SECTION ---
       - name: Log in to Azure
         uses: azure/login@v1
         with:
