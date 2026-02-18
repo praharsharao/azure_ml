@@ -134,7 +134,7 @@ def main():
     os.makedirs('outputs', exist_ok=True)
     model_path = 'outputs/best_insurance_model.pkl'
     joblib.dump(best_model, model_path)
-    print(f" Best model saved locally to {model_path}")
+    print(f" Best model saved to {model_path}")
 
 if __name__ == "__main__":
     main()
