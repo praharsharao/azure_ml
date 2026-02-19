@@ -25,7 +25,7 @@ job = command(
     code="./",  
     command="python train.py",
     environment=my_job_env,
-    compute="cpu-cluster", 
+    compute="sample-cluster-compute", 
     display_name="insurance-churn-prediction-v2",
     experiment_name="Insurance_Churn_V2"
 )
