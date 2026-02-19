@@ -18,7 +18,7 @@ job = command(
     code="./",  # Upload all files in current folder
     command="python train.py",
     environment="azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest", # We use a pre-made Azure env for now
-    compute="sample-ml-compute1", # Running on your compute instance for testing
+    compute="sample-cluster-compute", 
     display_name="insurance-churn-prediction-v2",
     experiment_name="Insurance_Churn_V2"
 )
