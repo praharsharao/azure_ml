@@ -5,14 +5,14 @@ from azure.ai.ml.constants import AssetTypes
 from azure.identity import DefaultAzureCredential
 
 def main():
-    # --- ALL CODE BELOW MUST BE INDENTED ---
+    # 1. Connect to the verified Workspace from your successful run
     print("Connecting to workspace...")
     credential = DefaultAzureCredential()
     ml_client = MLClient(
         credential=credential,
-        subscription_id=os.getenv("AZURE_SUBSCRIPTION_ID"),
-        resource_group_name="sample-uc",
-        workspace_name="sample_test_workspace_praharsha"
+        subscription_id=os.getenv("fad1a96b-a67e-452d-87d8-fcdb0a781616"),
+        resource_group_name="sample_uc",      # Verified from your log
+        workspace_name="sample_test_uc1"      # Verified from your log
     )
     print("Connected to Workspace via SDK v2!")
 
@@ -24,11 +24,12 @@ def main():
     )
 
     # 3. Define the Training Job
+    # Using your confirmed compute cluster name
     job = command(
         code="./",  
         command="python train.py",
         environment=my_job_env,
-        compute="sample-ml-compute1", 
+        compute="sample-ml-compute1", # Reverted to your successful cluster
         display_name="insurance-churn-prediction-v2",
         experiment_name="Insurance_Churn_V2"
     )
