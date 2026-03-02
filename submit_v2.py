@@ -13,7 +13,7 @@ def main():
         credential=credential,
         subscription_id="fad1a96b-a67e-452d-87d8-fcdb0a781616",
         resource_group_name="sample_uc",
-        workspace_name="sample_test_workspace_praharsha"
+        workspace_name="sample_test_uc1"
     )
     print("Connected to Workspace via SDK v2!")
 
