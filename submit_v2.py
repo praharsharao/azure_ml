@@ -5,17 +5,16 @@ from azure.ai.ml.constants import AssetTypes
 from azure.identity import DefaultAzureCredential
 
 def main():
-    # 1. Connect to the Workspace using GitHub Secrets (Environment Variables)
-    # These match the secret names you provided in your GitHub setup
-    print("Connecting to workspace...")
-    credential = DefaultAzureCredential()
-    ml_client = MLClient(
-        credential=credential,
-        subscription_id=os.getenv("AZURE_SUBSCRIPTION_ID"),
-        resource_group_name="aawasthi-rg", 
-        workspace_name="sample_test_workspace_praharsha"
-    )
-    print("Connected to Workspace via SDK v2!")
+# 1. Connect to the Workspace using your verified name
+print("Connecting to workspace...")
+credential = DefaultAzureCredential()
+ml_client = MLClient(
+    credential=credential,
+    subscription_id=os.getenv("AZURE_SUBSCRIPTION_ID"),
+    resource_group_name="sample-uc",              # Your confirmed RG
+    workspace_name="sample_test_workspace_praharsha" # Match image_34fadb.png
+)
+print("Connected to Workspace via SDK v2!")
 
     # 2. Define the cloud environment using your local env.yaml
     # This matches your existing project structure
