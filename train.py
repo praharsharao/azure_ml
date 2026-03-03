@@ -4,7 +4,6 @@ import numpy as np
 import os
 import joblib
 import mlflow
-import mlflow.sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -20,105 +19,67 @@ def main():
     parser.add_argument("--input_data", type=str, default='insurance.csv')
     args = parser.parse_args()
 
-    # NOTE: mlflow.set_experiment is REMOVED. 
-    # Azure ML handles this automatically via the submission script.
-
     # 1. Load Data
     print(f"Loading data from {args.input_data}...")
-    try:
-        df = pd.read_csv(args.input_data)
-    except FileNotFoundError:
-        print(f"Error: The file '{args.input_data}' was not found.")
-        return
+    df = pd.read_csv(args.input_data)
 
-    # 2. Define Features and Target
+    # 2. Preprocessing setup
     drop_cols = ['customer_id', 'employer_id', 'churn_probability', 'retention_score', 'churn_flag']
     existing_drop_cols = [c for c in drop_cols if c in df.columns]
-    
     X = df.drop(existing_drop_cols, axis=1)
     y = df['churn_flag']
 
-    # 3. Automatic Feature Selection
     numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
     categorical_features = X.select_dtypes(include=['object', 'category']).columns
 
-    print(f"Numerical Features: {len(numeric_features)}")
-    print(f"Categorical Features: {len(categorical_features)}")
-
-    # 4. Create Preprocessing Pipeline
-    numeric_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
-    ])
-
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-    ])
-
     preprocessor = ColumnTransformer(
         transformers=[
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
+            ('num', Pipeline([('imputer', SimpleImputer(strategy='median')), ('scaler', StandardScaler())]), numeric_features),
+            ('cat', Pipeline([('imputer', SimpleImputer(strategy='constant', fill_value='missing')), ('onehot', OneHotEncoder(handle_unknown='ignore'))]), categorical_features)
         ]
     )
 
-    # 5. Split Data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    # 6. Define Models
+    # 3. Training Loop
     models = {
         "Logistic Regression": LogisticRegression(max_iter=1000, class_weight='balanced'),
         "Random Forest": RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42),
-        "XGBoost": XGBClassifier(
-            scale_pos_weight=(y.value_counts()[0]/y.value_counts()[1]), 
-            eval_metric='logloss'
-        )
+        "XGBoost": XGBClassifier(scale_pos_weight=(y.value_counts()[0]/y.value_counts()[1]), eval_metric='logloss')
     }
 
     best_model = None
     best_f1 = 0
     best_name = ""
 
-    print("\n--- Training & Evaluating Models with MLflow ---")
-    
-    # 7. Train and Evaluate Loop
-    for name, model in models.items():
-        # Start a nested run for each specific model trial
-        with mlflow.start_run(run_name=name, nested=True):
-            
-            clf = Pipeline(steps=[('preprocessor', preprocessor),
-                                  ('classifier', model)])
-            
-            clf.fit(X_train, y_train)
-            y_pred = clf.predict(X_test)
-            
-            score = f1_score(y_test, y_pred)
-            print(f"{name:<20} | F1-Score: {score:.4f}")
+    os.makedirs('outputs', exist_ok=True)
 
-            # MLflow Logging
+    for name, model in models.items():
+        with mlflow.start_run(run_name=name, nested=True):
+            clf = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', model)])
+            clf.fit(X_train, y_train)
+            score = f1_score(y_test, clf.predict(X_test))
+            
+            # Log metrics and params
             mlflow.log_param("model_name", name)
             mlflow.log_metric("test_f1_score", score)
 
-            # FIX: Use 'outputs' path to avoid the MLflow 404 error
-            # This ensures the model is saved to Azure ML artifacts correctly.
-            mlflow.sklearn.log_model(sk_model=clf, artifact_path="outputs")
+            # SAVE LOCALLY FIRST TO BYPASS 404 ERROR
+            temp_path = f"outputs/{name.replace(' ', '_')}.pkl"
+            joblib.dump(clf, temp_path)
+            
+            # UPLOAD AS ARTIFACT (This bypasses the /logged-models API)
+            mlflow.log_artifact(temp_path, artifact_path="model_files")
 
             if score > best_f1:
                 best_f1 = score
                 best_model = clf
                 best_name = name
 
-    # 8. Final Results Summary
-    print(f"\n WINNER: {best_name} (F1: {best_f1:.4f})")
-
-    # 9. Save Best Model to Local Outputs folder
-    # Azure ML automatically uploads everything in the 'outputs' directory
-    os.makedirs('outputs', exist_ok=True)
+    # 4. Final winner registration
+    print(f"WINNER: {best_name} (F1: {best_f1:.4f})")
     joblib.dump(best_model, 'outputs/model.pkl')
-    print(f" Best model saved to outputs/model.pkl")
+    mlflow.log_artifact('outputs/model.pkl', artifact_path="best_model")
 
 if __name__ == "__main__":
     main()
