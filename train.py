@@ -20,9 +20,8 @@ def main():
     parser.add_argument("--input_data", type=str, default='insurance.csv')
     args = parser.parse_args()
 
-    # --- REMOVED: mlflow.set_experiment ---
-    # Azure ML handles the experiment context automatically based on your 
-    # submission script. Manual settings here cause ID mismatch errors.
+    # NOTE: mlflow.set_experiment is REMOVED. 
+    # Azure ML handles this automatically via the submission script.
 
     # 1. Load Data
     print(f"Loading data from {args.input_data}...")
@@ -39,14 +38,14 @@ def main():
     X = df.drop(existing_drop_cols, axis=1)
     y = df['churn_flag']
 
-    # 3. Feature Selection
+    # 3. Automatic Feature Selection
     numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
     categorical_features = X.select_dtypes(include=['object', 'category']).columns
 
     print(f"Numerical Features: {len(numeric_features)}")
     print(f"Categorical Features: {len(categorical_features)}")
 
-    # 4. Preprocessing Pipeline
+    # 4. Create Preprocessing Pipeline
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler', StandardScaler())
@@ -69,7 +68,7 @@ def main():
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # 6. Models
+    # 6. Define Models
     models = {
         "Logistic Regression": LogisticRegression(max_iter=1000, class_weight='balanced'),
         "Random Forest": RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42),
@@ -85,9 +84,9 @@ def main():
 
     print("\n--- Training & Evaluating Models with MLflow ---")
     
-    # 7. Training Loop
+    # 7. Train and Evaluate Loop
     for name, model in models.items():
-        # IMPORTANT: Use nested=True to create child runs under the Azure ML parent job
+        # Start a nested run for each specific model trial
         with mlflow.start_run(run_name=name, nested=True):
             
             clf = Pipeline(steps=[('preprocessor', preprocessor),
@@ -103,20 +102,23 @@ def main():
             mlflow.log_param("model_name", name)
             mlflow.log_metric("test_f1_score", score)
 
-            # Log the entire pipeline so preprocessing is bundled with the model
-            mlflow.sklearn.log_model(clf, artifact_path="model")
+            # FIX: Use 'outputs' path to avoid the MLflow 404 error
+            # This ensures the model is saved to Azure ML artifacts correctly.
+            mlflow.sklearn.log_model(sk_model=clf, artifact_path="outputs")
 
             if score > best_f1:
                 best_f1 = score
                 best_model = clf
                 best_name = name
 
-    # 8. Final Results
+    # 8. Final Results Summary
     print(f"\n WINNER: {best_name} (F1: {best_f1:.4f})")
-    
-    # 9. Local Artifacts (Azure ML will collect anything in the 'outputs' folder)
+
+    # 9. Save Best Model to Local Outputs folder
+    # Azure ML automatically uploads everything in the 'outputs' directory
     os.makedirs('outputs', exist_ok=True)
-    joblib.dump(best_model, 'outputs/best_insurance_model.pkl')
+    joblib.dump(best_model, 'outputs/model.pkl')
+    print(f" Best model saved to outputs/model.pkl")
 
 if __name__ == "__main__":
     main()
