@@ -89,7 +89,7 @@ def main():
     for name, model in models.items():
         # --- MLflow Run Start ---
         # We start a new run for each model to compare them individually
-        with mlflow.start_run(run_name=name):
+        with mlflow.start_run(run_name=name, nested=True):
             
             # Create a full pipeline: Preprocessor + Model
             clf = Pipeline(steps=[('preprocessor', preprocessor),
