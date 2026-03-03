@@ -1,15 +1,13 @@
-
 name: insurance-v2-env
 channels:
   - conda-forge
 dependencies:
-  - python=3.8
-  - numpy
-  - pandas
-  - scikit-learn
-  - xgboost
+  - python=3.10
   - pip
   - pip:
-    - azureml-defaults
-    - azureml-inference-server-http
-    - joblib
+      - azureml-defaults
+      - azureml-inference-server-http
+      - joblib
+      - pandas
+      - scikit-learn
+      - xgboost
