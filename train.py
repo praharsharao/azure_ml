@@ -1,30 +1,3 @@
-import sys
-import importlib.metadata
-
-# --- ENVIRONMENT DEBUG INFO ---
-print("\n" + "="*30)
-print("ENVIRONMENT DEBUG INFO")
-print("="*30)
-print(f"Python version: {sys.version}")
-
-# 1. Check specific package versions safely
-packages_to_check = ['setuptools', 'mlflow', 'mlflow-skinny', 'azureml-mlflow']
-for pkg in packages_to_check:
-    try:
-        version = importlib.metadata.version(pkg)
-        print(f"{pkg} version: {version}")
-    except importlib.metadata.PackageNotFoundError:
-        print(f"{pkg} is NOT INSTALLED")
-
-# 2. Test if the infamous pkg_resources is finally available
-try:
-    import pkg_resources
-    print(f"pkg_resources successfully imported! (setuptools version: {pkg_resources.__version__})")
-except ModuleNotFoundError:
-    print("CRITICAL ERROR: pkg_resources is STILL MISSING!")
-print("="*30 + "\n")
-# ------------------------------
-
 import argparse
 import pandas as pd
 import numpy as np
@@ -81,10 +54,9 @@ def main():
     best_name = ""
     os.makedirs('outputs', exist_ok=True)
 
-    # 5. The Training Loop (Creates 3 Child Runs)
+    # 5. The Training Loop
     print("\n--- Starting Model Comparisons ---")
     for name, model in models.items():
-        # Start a nested run for each model so they show up as separate trials
         with mlflow.start_run(run_name=name, nested=True):
             clf = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', model)])
             clf.fit(X_train, y_train)
@@ -92,11 +64,9 @@ def main():
             
             print(f"Finished {name} | F1: {score:.4f}")
 
-            # Log metrics and params
             mlflow.log_param("model_type", name)
             mlflow.log_metric("f1_score", score)
 
-            # SAVE MODEL AS ARTIFACT (Bypasses the 404 registry error)
             model_name_clean = name.replace(' ', '_').lower()
             local_path = f"outputs/{model_name_clean}.pkl"
             joblib.dump(clf, local_path)
