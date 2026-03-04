@@ -23,12 +23,13 @@ def main():
     print(f"Loading data from {args.input_data}...")
     df = pd.read_csv(args.input_data)
 
-    # 2. Preprocessing setup
+    # 2. Features and Target
     drop_cols = ['customer_id', 'employer_id', 'churn_probability', 'retention_score', 'churn_flag']
     existing_drop_cols = [c for c in drop_cols if c in df.columns]
     X = df.drop(existing_drop_cols, axis=1)
     y = df['churn_flag']
 
+    # 3. Preprocessing
     numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
     categorical_features = X.select_dtypes(include=['object', 'category']).columns
 
@@ -41,7 +42,7 @@ def main():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    # 3. Training Loop
+    # 4. Model Definitions
     models = {
         "Logistic Regression": LogisticRegression(max_iter=1000, class_weight='balanced'),
         "Random Forest": RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42),
@@ -51,35 +52,38 @@ def main():
     best_model = None
     best_f1 = 0
     best_name = ""
-
     os.makedirs('outputs', exist_ok=True)
 
+    # 5. The Training Loop (Creates 3 Child Runs)
+    print("\n--- Starting Model Comparisons ---")
     for name, model in models.items():
+        # Start a nested run for each model so they show up as separate trials
         with mlflow.start_run(run_name=name, nested=True):
             clf = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', model)])
             clf.fit(X_train, y_train)
             score = f1_score(y_test, clf.predict(X_test))
             
-            # Log metrics and params
-            mlflow.log_param("model_name", name)
-            mlflow.log_metric("test_f1_score", score)
+            print(f"Finished {name} | F1: {score:.4f}")
 
-            # SAVE LOCALLY FIRST TO BYPASS 404 ERROR
-            temp_path = f"outputs/{name.replace(' ', '_')}.pkl"
-            joblib.dump(clf, temp_path)
-            
-            # UPLOAD AS ARTIFACT (This bypasses the /logged-models API)
-            mlflow.log_artifact(temp_path, artifact_path="model_files")
+            # Log metrics and params
+            mlflow.log_param("model_type", name)
+            mlflow.log_metric("f1_score", score)
+
+            # SAVE MODEL AS ARTIFACT (Bypasses the 404 registry error)
+            model_name_clean = name.replace(' ', '_').lower()
+            local_path = f"outputs/{model_name_clean}.pkl"
+            joblib.dump(clf, local_path)
+            mlflow.log_artifact(local_path, artifact_path="model_trials")
 
             if score > best_f1:
                 best_f1 = score
                 best_model = clf
                 best_name = name
 
-    # 4. Final winner registration
-    print(f"WINNER: {best_name} (F1: {best_f1:.4f})")
-    joblib.dump(best_model, 'outputs/model.pkl')
-    mlflow.log_artifact('outputs/model.pkl', artifact_path="best_model")
+    # 6. Final Results
+    print(f"\nWINNER: {best_name} (F1: {best_f1:.4f})")
+    joblib.dump(best_model, 'outputs/best_model.pkl')
+    mlflow.log_artifact('outputs/best_model.pkl', artifact_path="final_model")
 
 if __name__ == "__main__":
     main()
