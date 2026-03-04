@@ -13,25 +13,24 @@ def main():
         workspace_name="sample_test_uc1"
     )
 
-    # 1. Define an environment that EXTENDS the curated one
-    # We use your deployment environment as the base image
-    my_extended_env = Environment(
-        name="sklearn-1.5-with-xgboost",
-        description="Extends curated sklearn environment to include xgboost",
-        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04", # Standard base
-        conda_file="env.yaml" # We use our local env.yaml to add xgboost
+    # 1. Define the environment with a SAFE name (no periods)
+    # We use the standard Azure ML base image and let env.yaml handle the rest.
+    my_job_env = Environment(
+        name="sklearn_xgboost_env_v5", # Use underscores, NO periods
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
+        conda_file="env.yaml"
     )
 
     job = command(
         code="./",  
         command="python train.py",
-        environment=my_extended_env, # Use the new extended environment
+        environment=my_job_env,
         compute="sample-cluster-compute", 
-        display_name="insurance-churn-final-run",
+        display_name="insurance-churn-final-v5",
         experiment_name="Insurance_Churn_V2"
     )
 
-    print("Submitting job with XGBoost support...")
+    print("Submitting job with fixed environment name...")
     returned_job = ml_client.jobs.create_or_update(job)
     print(f"Job submitted! View here: {returned_job.studio_url}")
 
