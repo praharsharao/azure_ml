@@ -1,44 +1,62 @@
-
-import datetime
+import os
 from azure.ai.ml import MLClient
-from azure.ai.ml.entities import ManagedOnlineEndpoint, ManagedOnlineDeployment, CodeConfiguration, Environment
+from azure.ai.ml.entities import (
+    ManagedOnlineEndpoint,
+    ManagedOnlineDeployment,
+    CodeConfiguration,
+    Environment
+)
 from azure.identity import DefaultAzureCredential
 
 def main():
-    ml_client = MLClient.from_config(DefaultAzureCredential())
-    
-    timestamp = datetime.datetime.now().strftime("%m%d%H%M")
-    endpoint_name = f"insurance-v2-endpoint-{timestamp}"
-    
-    print(f"🚀 Creating Endpoint: {endpoint_name}")
-    
-    # 1. Create Endpoint
-    endpoint = ManagedOnlineEndpoint(name=endpoint_name, auth_mode="key")
-    ml_client.begin_create_or_update(endpoint).wait()
-    
-    # 2. Deploy Model
-    print("Deploying Model (approx 10-15 mins)...")
-    deployment = ManagedOnlineDeployment(
-        name="production",
-        endpoint_name=endpoint_name,
-        model="insurance-churn-v2:1",
-        environment=Environment(
-            conda_file="conda.yaml",
-            image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04"
-        ),
-        code_configuration=CodeConfiguration(code="./", scoring_script="score.py"),
-        # We use DS2 (2 cores) now that we cleaned up the quota
-        instance_type="Standard_DS2_v2", 
-        instance_count=1
+    print("Connecting to workspace...")
+    credential = DefaultAzureCredential()
+    ml_client = MLClient(
+        credential=credential,
+        subscription_id="fad1a96b-a67e-452d-87d8-fcdb0a781616",
+        resource_group_name="sample_uc",
+        workspace_name="sample_test_uc1"
     )
+
+    endpoint_name = "insurance-churn-live-api" 
     
-    ml_client.begin_create_or_update(deployment).wait()
+    print(f"Checking/Creating endpoint: {endpoint_name}...")
+    endpoint = ManagedOnlineEndpoint(
+        name=endpoint_name,
+        description="Live REST API for Insurance Churn Predictions",
+        auth_mode="key"
+    )
+    ml_client.online_endpoints.begin_create_or_update(endpoint).result()
+
+# Define the exact environment object to guarantee Azure finds it
+    my_custom_env = Environment(
+        name="insurance-custom-env-v9", # Incremented to v9
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
+        conda_file="env.yaml"
+    )
+
+    print("Creating 'blue' deployment (This step provisions hardware and takes 5-10 minutes)...")
+    deployment = ManagedOnlineDeployment(
+        name="blue",
+        endpoint_name=endpoint_name,
+        # REMOVED the "azureml:" prefix so it targets the exact registered name
+        model="insurance-churn-prediction-model:1", 
+        environment=my_custom_env, 
+        code_configuration=CodeConfiguration(
+            code="./src", 
+            scoring_script="score.py"
+        ),
+        instance_type="Standard_D2as_v4",
+        instance_count=1,
+    )
+    ml_client.online_deployments.begin_create_or_update(deployment).result()
+
+    print("Routing 100% of live traffic to the 'blue' deployment...")
+    endpoint.traffic = {"blue": 100}
+    ml_client.online_endpoints.begin_create_or_update(endpoint).result()
     
-    # 3. Set Traffic
-    endpoint.traffic = {"production": 100}
-    ml_client.begin_create_or_update(endpoint).wait()
-    
-    print(f"✅ Live at: {ml_client.online_endpoints.get(endpoint_name).scoring_uri}")
+    print("Deployment Successful!")
+    print(f"Your Live API URL: {ml_client.online_endpoints.get(endpoint_name).scoring_uri}")
 
 if __name__ == "__main__":
     main()
