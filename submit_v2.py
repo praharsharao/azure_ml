@@ -17,10 +17,11 @@ def main():
     )
     print("Connected to Workspace via SDK v2!")
 
+
     my_job_env = Environment(
         image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
         conda_file="env.yaml",
-        name="insurance-cloud-env-v3"
+        name="insurance-cloud-env-v4"
     )
 
     job = command(
