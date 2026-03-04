@@ -18,7 +18,7 @@ def main():
 
     # Using the curated environment from your image_00fcca.png
     # We use version 39 as shown in your screenshot.
-    curated_env = "azureml:sklearn-1.5:39"
+    curated_env = "azureml://registries/azureml/environments/sklearn-1.5/versions/39"
 
     # Define the command job
     job = command(
