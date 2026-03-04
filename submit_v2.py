@@ -15,10 +15,10 @@ def main():
     )
     print("Connected successfully!")
 
-    # Going back to a completely clean Custom Environment
+    # Using a clean base with our strictly versioned env.yaml
     my_custom_env = Environment(
-        name="insurance-custom-env-v6",
-        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04", # Clean base
+        name="insurance-custom-env-v7", # Incremented to v7
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
         conda_file="env.yaml"
     )
 
@@ -27,7 +27,7 @@ def main():
         command="python train.py",
         environment=my_custom_env,
         compute="sample-cluster-compute", 
-        display_name="insurance-churn-custom-env-run",
+        display_name="insurance-churn-v7-run",
         experiment_name="Insurance_Churn_V2"
     )
 
