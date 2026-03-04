@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, f1_score
+from sklearn.metrics import f1_score
 from xgboost import XGBClassifier
 
 def main():
