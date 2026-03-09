@@ -43,7 +43,7 @@ def main():
         model="insurance-churn-prediction-model:1", 
         environment=my_custom_env, 
         code_configuration=CodeConfiguration(
-            code="./src", 
+            code="src", 
             scoring_script="score.py"
         ),
         instance_type="Standard_D2as_v4",
