@@ -1,11 +1,9 @@
-
 import urllib.request
 import json
 import os
 import ssl
 from azure.ai.ml import MLClient
 from azure.identity import DefaultAzureCredential
-import datetime
 
 def allowSelfSignedHttps(allowed):
     if allowed and not os.environ.get('PYTHONHTTPSVERIFY', '') and getattr(ssl, '_create_unverified_context', None):
@@ -15,42 +13,27 @@ def main():
     print("🔐 Connecting to Azure...")
     ml_client = MLClient.from_config(DefaultAzureCredential())
 
-    # 1. Get all endpoints starting with 'insurance-v2'
-    endpoints = ml_client.online_endpoints.list()
-    my_endpoints = [e for e in endpoints if e.name.startswith("insurance-v2")]
-    
-    if not my_endpoints:
-        print("❌ No endpoints found.")
-        return
-
-    # 2. Robust Sort (Handle NoneType error)
-    # We filter out endpoints that don't have a creation date (broken ones)
-    valid_endpoints = [e for e in my_endpoints if e.creation_context and e.creation_context.created_at]
-    
-    if not valid_endpoints:
-        print("❌ Found endpoints, but they are all broken/incomplete.")
-        return
-
-    # Sort newest first
-    latest_endpoint = sorted(valid_endpoints, key=lambda x: x.creation_context.created_at, reverse=True)[0]
-    endpoint_name = latest_endpoint.name
+    # We know the exact name, so we just target it directly
+    endpoint_name = "insurance-churn-live-api"
     print(f"🎯 Targeting Endpoint: {endpoint_name}")
 
-    # 3. Get Secrets
+    # 1. Get Secrets Directly
     try:
         keys = ml_client.online_endpoints.get_keys(name=endpoint_name)
         auth_key = keys.primary_key
-        scoring_uri = ml_client.online_endpoints.get(name=endpoint_name).scoring_uri
+        
+        endpoint = ml_client.online_endpoints.get(name=endpoint_name)
+        scoring_uri = endpoint.scoring_uri
     except Exception as e:
-        print(f"❌ Failed to get keys/URI. The endpoint might still be creating.\nError: {e}")
+        print(f"❌ Failed to get keys/URI. Error: {e}")
         return
 
     print(f"🌍 Scoring URL: {scoring_uri}")
     print(f"🔑 Auth Key: {auth_key[:5]}... (hidden)")
 
-    # 4. Prepare Data
+    # 2. Prepare Data
     data = {
-      "data": [
+      "input_data": [
         {
           "age": 71, "gender": "Male", "income_band": "Upper-Middle", "employment_status": "Self-Employed",
           "province": "North West", "urban_rural": "Urban", "household_size": 6, "province_risk_score": 0.26,
@@ -86,7 +69,7 @@ def main():
     }
     
     body = str.encode(json.dumps(data))
-    headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ auth_key), 'azureml-model-deployment': 'production'}
+    headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ auth_key), 'azureml-model-deployment': 'blue'}
 
     req = urllib.request.Request(scoring_uri, body, headers)
 

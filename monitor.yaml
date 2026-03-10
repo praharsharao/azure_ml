@@ -1,0 +1,27 @@
+$schema: https://azuremlschemas.azureedge.net/latest/schedule.schema.json
+name: insurance-drift-schedule
+display_name: Insurance Churn Drift Monitor
+trigger:
+  type: recurrence
+  frequency: day
+  interval: 1
+create_monitor:
+  compute:
+    instance_type: standard_e4s_v3
+    runtime_version: 3.2
+  monitoring_signals:
+    data_drift:
+      type: data_drift
+      target_data:
+        dataset_type: endpoint_input
+        endpoint_deployment_id: azureml:insurance-churn-live-api:blue
+      baseline_data: azureml:insurance_churn:1
+      features:
+        type: all_features
+      metric_thresholds:
+        numerical:
+          metric: normalized_wasserstein_distance
+          threshold: 0.1
+        categorical:
+          metric: jensen_shannon_distance
+          threshold: 0.1

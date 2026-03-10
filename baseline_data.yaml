@@ -1,0 +1,5 @@
+$schema: https://azuremlschemas.azureedge.net/latest/data.schema.json
+type: uri_file
+name: insurance-baseline-data
+description: The original training data used as the baseline for drift detection.
+path: ./insurance.csv

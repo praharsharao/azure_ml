@@ -1,34 +1,15 @@
-name: Train and Deploy Model (CI/CD)
-
-on:
-  push:
-    branches: [ main ]
- HEAD
-    paths:
-      - 'train.py'
-      - 'src/score.py'
-      - 'conda.yml'
-      - 'submit_v2.py'
-      - 'deploy.py'
-  repository_dispatch:
-    types: [drift_alert_retrain]
-  workflow_dispatch:name: Train and Deploy Model (CI/CD)
-
+# 1. The Triggers: When should this run?
 on:
   push:
     branches:
       - main
- b7bc8a2 (Final cleanup of project files and healthy drift mode)
     paths:
-      - 'train.py'
-      - 'src/score.py'
-      - 'conda.yml'
-      - 'submit_v2.py'
-      - 'deploy.py'
+      - 'train.py'           # Only triggers if you actually edit the training logic!
   repository_dispatch:
-    types: [drift_alert_retrain]
-  workflow_dispatch:
+    types: [drift_alert_retrain] # This is the exact phrase our drift detector broadcasts
+  workflow_dispatch:         # For manual testing
 
+# 2. The Job: What does the robot engineer do?
 jobs:
   rebuild-ai:
     runs-on: ubuntu-latest
@@ -41,10 +22,11 @@ jobs:
         with:
           python-version: '3.8'
 
+      # Log into your Azure environment using a hidden GitHub Secret
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
           
       - name: Install Dependencies & Azure CLI
         run: |
@@ -52,6 +34,7 @@ jobs:
           pip install azure-ai-ml azure-identity
           az extension add -n ml -y
 
+      # Run your existing scripts to train Version 2 and swap the live endpoint!
       - name: Train and Deploy New Model
         run: |
           echo "🚀 Triggering Training Job..."
@@ -59,4 +42,3 @@ jobs:
           
           echo "🌐 Updating Live API to Version 2..."
           python deploy.py
-
