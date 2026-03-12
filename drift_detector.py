@@ -2,98 +2,10 @@ import os
 import requests
 import pandas as pd
 import mlflow
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from scipy.stats import wasserstein_distance
 from azure.ai.ml import MLClient
 from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
-# ============================================================================
-# SECRET SHUFFLING / ROTATION (AZURE KEY VAULT)
-# ============================================================================
-def get_secret_from_keyvault(secret_name):
-    """
-    Fetches a secret dynamically from Azure Key Vault. 
-    This is how you handle Automated Secret Shuffling! When Azure rotates 
-    the keys, this script automatically pulls the newest one.
-    """
-    try:
-        # Replace with your actual Key Vault URL
-        KV_Uri = "https://your-key-vault-name.vault.azure.net"
-        credential = DefaultAzureCredential()
-        client = SecretClient(vault_url=KV_Uri, credential=credential)
-        return client.get_secret(secret_name).value
-    except Exception as e:
-        # Fallback to local environment variables during development
-        return os.environ.get(secret_name)
-
-# ============================================================================
-# AUTOMATED MAIL ALERTS
-# ============================================================================
-def send_drift_alert_email(drift_score, threshold, features_drifted):
-    """
-    Sends an HTML email alert to the MLOps team when data drift is detected.
-    """
-    # Fetching credentials securely
-    SENDER_EMAIL = get_secret_from_keyvault("ALERT-SENDER-EMAIL") or "your_mlops_bot@gmail.com"
-    SENDER_PASSWORD = get_secret_from_keyvault("ALERT-SENDER-PASSWORD") or "your_app_password"
-    RECEIVER_EMAIL = "ml-team-alerts@linkfields.com" 
-    
-    msg = MIMEMultipart()
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = RECEIVER_EMAIL
-    msg['Subject'] = "🚨 URGENT: ML Model Data Drift Detected"
-    
-    html_body = f"""
-    <html>
-        <body style="font-family: Arial, sans-serif; color: #333;">
-            <h2 style="color: #d9534f;">Model Performance Alert: Data Drift Detected</h2>
-            <p>The automated monitoring system has detected significant data drift in the <b>Insurance Churn Prediction Model</b>.</p>
-            
-            <table style="border-collapse: collapse; width: 50%; margin-bottom: 20px;">
-                <tr style="background-color: #f2f2f2;">
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Metric</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Value</th>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">Drift Score</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; color: red;"><b>{drift_score:.4f}</b></td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">Safety Threshold</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">{threshold:.4f}</td>
-                </tr>
-            </table>
-            
-            <p><b>Top Drifted Features:</b> {features_drifted}</p>
-            
-            <p><i>Note: The CI/CD pipeline has been automatically triggered to retrain the model via GitHub Actions. No immediate manual intervention is required unless the pipeline fails.</i></p>
-            
-            <hr>
-            <p style="font-size: 12px; color: #777;">This is an automated message from the Linkfields MLOps Platform.</p>
-        </body>
-    </html>
-    """
-    
-    msg.attach(MIMEText(html_body, 'html'))
-    
-    try:
-        # Example using Gmail SMTP (For Office 365 use smtp.office365.com, port 587)
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls() 
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        print(f"📧 Alert email successfully sent to {RECEIVER_EMAIL}")
-    except Exception as e:
-        print(f"❌ Failed to send email alert. Ensure credentials are set. Error: {str(e)}")
-
-
-# ============================================================================
-# MAIN DRIFT DETECTION LOGIC
-# ============================================================================
 def check_drift():
     print("🚀 Starting Custom Data Drift Evaluation...")
     
@@ -131,11 +43,8 @@ def check_drift():
             mlflow.log_param("status", "DRIFT_DETECTED_RETRAINING")
             print("🚨 ALERT: Data Drift Detected!")
             
-            # ---> NEW: Send the email alert to stakeholders <---
-            send_drift_alert_email(drift_score=drift_score, threshold=threshold, features_drifted="age")
-            
-            # ---> NEW: Fetch GitHub PAT securely via Key Vault (or Env variables) <---
-            github_token = get_secret_from_keyvault("MY_GITHUB_PAT")
+            # Fetch GitHub PAT securely from environment variables (GitHub Secrets)
+            github_token = os.environ.get("MY_GITHUB_PAT")
             
             if not github_token:
                 print("❌ ERROR: GitHub token not found.")
