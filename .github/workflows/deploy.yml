@@ -25,6 +25,6 @@ jobs:
 
       - name: Install dependencies and run submission
         run: |
-          pip install azure-ai-ml azure-identity
+          pip install azure-ai-ml azure-identity azure-keyvault-secrets pandas mlflow scipy requests
           echo "✅ Successfully logged into Azure!"
           # python submitv2.py
