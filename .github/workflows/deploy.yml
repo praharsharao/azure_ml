@@ -13,7 +13,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
-- name: Log in to Azure
+      - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: |
@@ -33,5 +33,4 @@ jobs:
         run: |
           pip install azure-ai-ml azure-identity
           echo "✅ Successfully logged into Azure!"
-          # Uncomment the line below when you are ready to automate your training job
           # python submitv2.py
