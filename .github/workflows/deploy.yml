@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies and run submission
+      - name: Install dependencies and run script
         run: |
           pip install azure-ai-ml azure-identity azure-keyvault-secrets pandas mlflow scipy requests
-          echo "✅ Successfully logged into Azure!"
-          # python submitv2.py
+          echo "✅ Packages installed successfully!"
+          python drift_detector.py
