@@ -76,10 +76,16 @@ def main():
                 best_model = clf
                 best_name = name
 
-    # 6. Final Results
+    # 6. Final Results & AUTOMATIC VERSIONING
     print(f"\nWINNER: {best_name} (F1: {best_f1:.4f})")
-    joblib.dump(best_model, 'outputs/best_model.pkl')
-    mlflow.log_artifact('outputs/best_model.pkl', artifact_path="final_model")
+    
+    # This specifically tells Azure to register the model and bump the version!
+    mlflow.sklearn.log_model(
+        sk_model=best_model,
+        artifact_path="model",
+        registered_model_name="insurance-churn-prediction-model"
+    )
+    print("✅ Model successfully registered to Azure ML!")
 
 if __name__ == "__main__":
     main()
