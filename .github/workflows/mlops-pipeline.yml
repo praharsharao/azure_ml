@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   repository_dispatch:
-    types: [drift_detected]
+    types: [drift_alert_retrain]
 
 permissions:
   contents: read
