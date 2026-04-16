@@ -1,0 +1,6 @@
+*.amltmp
+__pycache__/
+*.pyc
+*.swp
+final_predictions/
+input_batch/

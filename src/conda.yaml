@@ -1,0 +1,13 @@
+name: batch-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pandas
+  - scikit-learn
+  - pip:
+      - setuptools<70.0.0  
+      - mlflow
+      - azureml-core
+      - azureml-dataset-runtime[fuse]

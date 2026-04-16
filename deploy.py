@@ -28,9 +28,9 @@ def main():
     )
     ml_client.online_endpoints.begin_create_or_update(endpoint).result()
 
-# Define the exact environment object to guarantee Azure finds it
+
     my_custom_env = Environment(
-        name="insurance-custom-env-v9", # Incremented to v9
+        name="insurance-custom-env-v9", 
         image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04",
         conda_file="env.yaml"
     )
@@ -39,7 +39,6 @@ def main():
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=endpoint_name,
-        # REMOVED the "azureml:" prefix so it targets the exact registered name
         model="insurance-churn-prediction-model:1", 
         environment=my_custom_env, 
         code_configuration=CodeConfiguration(

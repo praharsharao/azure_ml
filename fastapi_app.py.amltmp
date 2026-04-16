@@ -14,7 +14,11 @@ app = FastAPI(
 
 # 2. Load the Model at Startup (Global Scope)
 # Ensure 'best_model.pkl' is in the same directory as this script!
-MODEL_PATH = "outputs/best_insurance_model.pkl"
+import mlflow.pyfunc
+
+# Point directly to the cloud registry!
+model_uri = "models:/insurance-churn-prediction-model/latest"
+model = mlflow.pyfunc.load_model(model_uri)
 
 try:
     model = joblib.load(MODEL_PATH)
