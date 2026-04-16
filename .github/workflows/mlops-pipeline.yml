@@ -3,6 +3,8 @@ name: Train Model on Azure ML
 on:
   push:
     branches: [ "main" ]
+  repository_dispatch:
+    types: [drift_alert_retrain]
 
 permissions:
   contents: read
